@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Klockatt</title>
+    
+    <!-- PWA Manifest & Ikoner -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --text: #f8fafc;
+            --border: #334155;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --success: #22c55e;
+        }
+
+        /* Lås scroll på hela sidan */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            user-select: none;
+        }
+
+        /* Huvudcontainer för appen */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100svh; /* För mobila webbläsare */
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: var(--surface);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        /* Header */
+        header {
+            padding: 0.8rem 1rem;
+            background-color: var(--bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-title-box {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .version-tag {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: bold;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: #60a5fa;
+            line-height: 1.1;
+        }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 0.2rem 0.5rem;
+        }
+
+        /* Vyn-område (Innehåll) */
+        main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.2rem;
+            box-sizing: border-box;
+        }
+
+        .tab-content {
+            display: none;
+            height: 100%;
+            flex-direction: column;
+        }
+        .tab-content.active {
+            display: flex;
+        }
+
+        /* Form-komponenter */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+        select, input {
+            width: 100%;
+            padding: 0.65rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background-color: var(--bg);
+            color: var(--text);
+            font-size: 0.95rem;
+            box-sizing: border-box;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Grid för dagar */
+        .days-grid {
+            display: flex;
+            gap: 4px;
+            margin-top: 5px;
+        }
+        .day-chip {
+            flex: 1;
+            text-align: center;
+            padding: 6px 2px;
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .day-chip.selected {
+            background-color: var(--primary);
+            border-color: #60a5fa;
+        }
+
+        /* Knappar */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+        button.btn {
+            padding: 0.75rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: var(--primary);
+            color: var(--text);
+            transition: background 0.2s;
+        }
+        button.btn:hover { background-color: var(--primary-hover); }
+        button.btn-danger { background-color: var(--danger); }
+        button.btn-danger:hover { background-color: var(--danger-hover); }
+        button.btn-reset { background-color: var(--border); }
+
+        /* Lista över larm / klockor */
+        .item-list {
+            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .item-card {
+            background-color: var(--bg);
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .item-sub {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        /* Timer-ingångar */
+        .timer-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .timer-inputs div { flex: 1; text-align: center; }
+        .timer-inputs input {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            padding: 0.5rem;
+        }
+
+        /* Bottom Nav Bar */
+        nav.bottom-nav {
+            display: flex;
+            height: 65px;
+            background-color: var(--bg);
+            border-top: 1px solid var(--border);
+        }
+        .nav-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.8rem;
+            gap: 4px;
+            cursor: pointer;
+        }
+        .nav-btn.active {
+            color: #60a5fa;
+            border-top: 3px solid var(--primary);
+        }
+
+        /* Popup Modaler */
+        .modal {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.96);
+            z-index: 100;
+            padding: 1.5rem;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .modal.active { display: flex; }
+        .switch-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Ringande larm overlay */
+        .alarm-overlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--danger);
+            z-index: 200;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            animation: pulse 1s infinite;
+        }
+        .alarm-overlay.active { display: flex; }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <div class="header-title-box">
+            <span class="version-tag">1.0.0</span>
+            <h1 id="appTitle">Klockatt</h1>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" id="addAlarmHeaderBtn" style="display: inline-block;">➕</button>
+            <button class="icon-btn" id="openSettings">⚙️</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- SIDA 1: LARM -->
+        <div id="tab-alarm" class="tab-content active">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="font-size: 1.1rem; margin:0;">Mina Larm</h2>
+                <button class="btn" id="openAddAlarmBtn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">➕ Nytt Larm</button>
+            </div>
+            <div class="item-list" id="alarmList"></div>
+        </div>
+
+        <!-- SIDA 2: VÄRLDSKLOCKOR -->
+        <div id="tab-world" class="tab-content">
+            <h2 style="font-size: 1.1rem; margin-top:0;">Världsklockor (UTC)</h2>
+            <div class="form-group">
+                <label>Välj tidszon (Förskjutning)</label>
+                <select id="timezoneSelect"></select>
+                <button class="btn" id="addZoneBtn" style="margin-top: 8px;">Lägg till klocka</button>
+            </div>
+            <div class="item-list" id="worldClockList"></div>
+        </div>
+
+        <!-- SIDA 3: TIMER / TIDTAGARUR -->
+        <div id="tab-timer" class="tab-content">
+            <h2 style="font-size: 1.1rem; margin-top:0;">Timer / Tidtagarur</h2>
+            
+            <div class="timer-inputs">
+                <div>
+                    <label>Tim</label>
+                    <input type="number" id="tHours" value="0" min="0">
+                </div>
+                <div>
+                    <label>Min</label>
+                    <input type="number" id="tMinutes" value="0" min="0">
+                </div>
+                <div>
+                    <label>Sek</label>
+                    <input type="number" id="tSeconds" value="0" min="0">
+                </div>
+            </div>
+
+            <div class="controls-grid">
+                <button class="btn" id="btnUp">Upp ⬆️</button>
+                <button class="btn" id="btnDown">Ner ⬇️</button>
+                <button class="btn btn-danger" id="btnStop">Stop ⏹️</button>
+                <button class="btn btn-reset" id="btnReset">Reset 🔄</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <button class="nav-btn active" data-tab="tab-alarm">
+            ⏰ <span>Larm</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-world">
+            🌍 <span>Världsklockor</span>
+        </button>
+        <button class="nav-btn" data-tab="tab-timer">
+            ⏱️ <span>Timer</span>
+        </button>
+    </nav>
+
+    <!-- MODAL: SKAPA LARM -->
+    <div class="modal" id="alarmModal">
+        <h2 style="color: #60a5fa; margin-top:0;">Nytt Larm</h2>
+
+        <div class="form-group">
+            <label>Starttid</label>
+            <input type="time" id="alarmTime" value="07:00">
+        </div>
+
+        <div class="form-group">
+            <label>Varaktighet (pågår i minuter)</label>
+            <input type="number" id="alarmDuration" value="5" min="1" max="1440">
+        </div>
+
+        <div class="form-group">
+            <label>Välj eller Ladda upp ljud</label>
+            <select id="alarmSoundSelect">
+                <option value="default">Standard Signal</option>
+            </select>
+            <input type="file" class="soundUploadInput" accept="audio/*" style="margin-top: 5px; font-size: 0.8rem;">
+        </div>
+
+        <div class="form-group">
+            <label>Upprepa</label>
+            <select id="repeatType">
+                <option value="weekly">Varje vecka (Valda dagar)</option>
+                <option value="biweekly">Varannan vecka</option>
+                <option value="monthly">Varje månad</option>
+                <option value="yearly">Varje år</option>
+                <option value="customYearly">Exakta veckor & dagar per år</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="daysSelector">
+            <label>Välj Dagar</label>
+            <div class="days-grid">
+                <div class="day-chip" data-day="1">Må</div>
+                <div class="day-chip" data-day="2">Ti</div>
+                <div class="day-chip" data-day="3">On</div>
+                <div class="day-chip" data-day="4">To</div>
+                <div class="day-chip" data-day="5">Fr</div>
+                <div class="day-chip" data-day="6">Lö</div>
+                <div class="day-chip" data-day="0">Sö</div>
+            </div>
+        </div>
+
+        <div class="form-group" id="customYearlyGroup" style="display:none;">
+            <label>Veckonummer (1-52) & Dag</label>
+            <div style="display:flex; gap: 5px;">
+                <input type="number" id="customWeek" placeholder="Vecka (1-52)" min="1" max="52">
+                <select id="customDay">
+                    <option value="1">Måndag</option>
+                    <option value="2">Tisdag</option>
+                    <option value="3">Onsdag</option>
+                    <option value="4">Torsdag</option>
+                    <option value="5">Fredag</option>
+                    <option value="6">Lördag</option>
+                    <option value="0">Söndag</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:auto; padding-top:10px;">
+            <button class="btn" id="saveAlarmBtn">Spara Larm</button>
+            <button class="btn btn-reset" id="closeAlarmModal">Avbryt</button>
+        </div>
+    </div>
+
+    <!-- MODAL: INSTÄLLNINGAR -->
+    <div class="modal" id="settingsModal">
+        <h2 style="color: #60a5fa; margin-top:0;">Inställningar</h2>
+        
+        <div class="switch-container">
+            <div>
+                <strong>DTMS Tidsläge</strong>
+                <div style="font-size:0.75rem; color:#94a3b8;">
+                    20 tim/dygn, 100 min/tim, 100 sek/min
+                </div>
+            </div>
+            <input type="checkbox" id="dtmsToggle" style="width:auto;">
+        </div>
+
+        <div class="form-group" style="margin-top: 1rem;">
+            <label><strong>Timerljud</strong></label>
+            <select id="timerSoundSelect">
+                <option value="default">Standard Signal</option>
+            </select>
+            <input type="file" class="soundUploadInput" accept="audio/*" style="margin-top: 5px; font-size: 0.8rem;">
+        </div>
+
+        <div style="margin-top: 1.5rem; padding: 0.8rem; background-color: var(--bg); border-radius: 6px; border: 1px solid var(--border);">
+            <div style="font-size:0.85rem; font-weight:bold; color:#60a5fa; margin-bottom: 4px;">Version 1.0.0</div>
+            <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.75rem; color: #cbd5e1;">
+                <li><strong>1</strong> : Nya funktioner</li>
+                <li><strong>.0</strong> : Ändring på gammal funktion</li>
+                <li><strong>.0</strong> : Buggfix</li>
+            </ul>
+        </div>
+
+        <button class="btn btn-reset" id="closeSettings" style="margin-top: auto;">Stäng</button>
+    </div>
+
+    <!-- Alarm Overlay når tiden går ut -->
+    <div class="alarm-overlay" id="alarmOverlay">
+        <h1 style="font-size: 3rem; margin:0;">⏰ LARM!</h1>
+        <p id="alarmOverlaySub">Tiden är ute!</p>
+        <button class="btn btn-reset" id="stopAlarmBtn" style="margin-top: 2rem; padding: 1rem 2rem;">Stäng av</button>
+    </div>
+</div>
+
+<script>
+    /* --- STATE MANAGEMENT & STORAGE --- */
+    let isDTMS = false;
+    let alarms = JSON.parse(localStorage.getItem('klockatt_alarms')) || [];
+    let worldZones = JSON.parse(localStorage.getItem('klockatt_zones')) || [0, 1, 2, -5, 9];
+    let customSounds = JSON.parse(localStorage.getItem('klockatt_sounds')) || [];
+    let selectedTimerSound = localStorage.getItem('klockatt_timer_sound') || 'default';
+
+    // Timer Variabler
+    let timerInterval = null;
+    let timerMode = 'idle';
+    let timerTotalSeconds = 0;
+
+    /* --- INITIALERING --- */
+    document.addEventListener('DOMContentLoaded', () => {
+        setupNavigation();
+        setupDTMS();
+        setupAlarms();
+        setupWorldClocks();
+        setupTimer();
+        setupAudioUpload();
+
+        setInterval(mainTick, 1000);
+    });
+
+    /* --- DTMS LOGIK & UTCS-BERÄKNING --- */
+    function getDTMSTimeForOffset(offsetHours) {
+        const now = new Date();
+        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const targetMs = utcMs + (offsetHours * 3600000);
+        const targetDate = new Date(targetMs);
+
+        const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate()).getTime();
+        const elapsedMs = targetMs - startOfDay;
+        const dayFraction = elapsedMs / 86400000;
+
+        const totalDtmsSeconds = Math.floor(dayFraction * 200000);
+        const hours = Math.floor(totalDtmsSeconds / 10000);
+        const minutes = Math.floor((totalDtmsSeconds % 10000) / 100);
+        const seconds = totalDtmsSeconds % 100;
+
+        return {
+            h: String(hours).padStart(2, '0'),
+            m: String(minutes).padStart(2, '0'),
+            s: String(seconds).padStart(2, '0')
+        };
+    }
+
+    function getStandardTimeForOffset(offsetHours) {
+        const now = new Date();
+        const utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const targetDate = new Date(utcMs + (offsetHours * 3600000));
+
+        const h = String(targetDate.getHours()).padStart(2, '0');
+        const m = String(targetDate.getMinutes()).padStart(2, '0');
+        const s = String(targetDate.getSeconds()).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    }
+
+    /* --- LJUDUPPSPELNING --- */
+    function playSound(soundVal) {
+        if (soundVal === 'default' || soundVal === undefined) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            } catch(e) {}
+        } else {
+            const soundObj = customSounds[parseInt(soundVal)];
+            if (soundObj && soundObj.data) {
+                const audio = new Audio(soundObj.data);
+                audio.play();
+            }
+        }
+    }
+
+    /* --- FLIKNAVIGERING & MODALER --- */
+    function setupNavigation() {
+        const navBtns = document.querySelectorAll('.nav-btn');
+        const tabs = document.querySelectorAll('.tab-content');
+        const addAlarmHeaderBtn = document.getElementById('addAlarmHeaderBtn');
+
+        navBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                navBtns.forEach(b => b.classList.remove('active'));
+                tabs.forEach(t => t.classList.remove('active'));
+
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.tab).classList.add('active');
+
+                addAlarmHeaderBtn.style.display = (btn.dataset.tab === 'tab-alarm') ? 'inline-block' : 'none';
+            });
+        });
+
+        // Alarm Modal
+        const alarmModal = document.getElementById('alarmModal');
+        const openModal = () => alarmModal.classList.add('active');
+        const closeModal = () => alarmModal.classList.remove('active');
+
+        document.getElementById('openAddAlarmBtn').onclick = openModal;
+        addAlarmHeaderBtn.onclick = openModal;
+        document.getElementById('closeAlarmModal').onclick = closeModal;
+
+        // Settings Modal
+        const settingsModal = document.getElementById('settingsModal');
+        document.getElementById('openSettings').onclick = () => settingsModal.classList.add('active');
+        document.getElementById('closeSettings').onclick = () => settingsModal.classList.remove('active');
+    }
+
+    function setupDTMS() {
+        const toggle = document.getElementById('dtmsToggle');
+        toggle.addEventListener('change', (e) => {
+            isDTMS = e.target.checked;
+            renderWorldClocks();
+            updateTimerDisplay();
+        });
+    }
+
+    /* --- SIDA 1: LARM LOGIK --- */
+    function setupAlarms() {
+        const daysChips = document.querySelectorAll('.day-chip');
+        daysChips.forEach(chip => {
+            chip.addEventListener('click', () => chip.classList.toggle('selected'));
+        });
+
+        const repeatSelect = document.getElementById('repeatType');
+        repeatSelect.addEventListener('change', (e) => {
+            document.getElementById('daysSelector').style.display = (e.target.value === 'weekly' || e.target.value === 'biweekly') ? 'block' : 'none';
+            document.getElementById('customYearlyGroup').style.display = (e.target.value === 'customYearly') ? 'block' : 'none';
+        });
+
+        document.getElementById('saveAlarmBtn').onclick = () => {
+            addAlarm();
+            document.getElementById('alarmModal').classList.remove('active');
+        };
+
+        document.getElementById('alarmSoundSelect').addEventListener('change', (e) => {
+            playSound(e.target.value);
+        });
+
+        renderAlarms();
+    }
+
+    function addAlarm() {
+        const time = document.getElementById('alarmTime').value;
+        const duration = parseInt(document.getElementById('alarmDuration').value) || 5;
+        const sound = document.getElementById('alarmSoundSelect').value;
+        const repeat = document.getElementById('repeatType').value;
+        
+        let selectedDays = [];
+        document.querySelectorAll('.day-chip.selected').forEach(c => selectedDays.push(parseInt(c.dataset.day)));
+
+        const customWeek = document.getElementById('customWeek').value;
+        const customDay = document.getElementById('customDay').value;
+
+        const alarm = {
+            id: Date.now(),
+            time,
+            duration,
+            sound,
+            repeat,
+            days: selectedDays,
+            customWeek,
+            customDay,
+            active: true
+        };
+
+        alarms.push(alarm);
+        saveAlarms();
+        renderAlarms();
+    }
+
+    function saveAlarms() {
+        localStorage.setItem('klockatt_alarms', JSON.stringify(alarms));
+    }
+
+    function renderAlarms() {
+        const list = document.getElementById('alarmList');
+        list.innerHTML = '';
+        if (alarms.length === 0) {
+            list.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:2rem;">Inga larm skapade ännu.<br>Klicka på ➕ för att skapa ett.</div>';
+            return;
+        }
+
+        alarms.forEach(a => {
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.innerHTML = `
+                <div>
+                    <div class="item-title">${a.time} (${a.duration} m)</div>
+                    <div class="item-sub">Upprepa: ${a.repeat}</div>
+                </div>
+                <div>
+                    <button onclick="toggleAlarm(${a.id})" class="btn" style="padding:0.4rem 0.8rem; font-size:0.8rem;">${a.active ? 'PÅ' : 'AV'}</button>
+                    <button onclick="deleteAlarm(${a.id})" class="btn btn-danger" style="padding:0.4rem 0.8rem; font-size:0.8rem;">🗑️</button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    window.toggleAlarm = (id) => {
+        alarms = alarms.map(a => a.id === id ? {...a, active: !a.active} : a);
+        saveAlarms();
+        renderAlarms();
+    };
+
+    window.deleteAlarm = (id) => {
+        alarms = alarms.filter(a => a.id !== id);
+        saveAlarms();
+        renderAlarms();
+    };
+
+    /* Ljuduppladdning & Inställning för Timerljud */
+    function setupAudioUpload() {
+        document.querySelectorAll('.soundUploadInput').forEach(uploader => {
+            uploader.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(evt) {
+                        const soundObj = { name: file.name, data: evt.target.result };
+                        customSounds.push(soundObj);
+                        localStorage.setItem('klockatt_sounds', JSON.stringify(customSounds));
+                        updateSoundDropdowns();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+
+        document.getElementById('timerSoundSelect').addEventListener('change', (e) => {
+            selectedTimerSound = e.target.value;
+            localStorage.setItem('klockatt_timer_sound', selectedTimerSound);
+            playSound(selectedTimerSound);
+        });
+
+        updateSoundDropdowns();
+    }
+
+    function updateSoundDropdowns() {
+        const alarmSelect = document.getElementById('alarmSoundSelect');
+        const timerSelect = document.getElementById('timerSoundSelect');
+
+        let html = '<option value="default">Standard Signal</option>';
+        customSounds.forEach((s, idx) => {
+            html += `<option value="${idx}">${s.name}</option>`;
+        });
+
+        alarmSelect.innerHTML = html;
+        timerSelect.innerHTML = html;
+        timerSelect.value = selectedTimerSound;
+    }
+
+    /* --- SIDA 2: VÄRLDSKLOCKOR LOGIK (UTC-förskjutning) --- */
+    function setupWorldClocks() {
+        const select = document.getElementById('timezoneSelect');
+        select.innerHTML = '';
+        
+        for (let offset = -12; offset <= 14; offset++) {
+            const opt = document.createElement('option');
+            opt.value = offset;
+            const sign = offset >= 0 ? '+' : '';
+            opt.textContent = `UTC ${sign}${offset}`;
+            if (offset === 0) opt.selected = true;
+            select.appendChild(opt);
+        }
+
+        document.getElementById('addZoneBtn').onclick = () => {
+            const offset = parseInt(select.value);
+            if (!worldZones.includes(offset)) {
+                worldZones.push(offset);
+                localStorage.setItem('klockatt_zones', JSON.stringify(worldZones));
+                renderWorldClocks();
+            }
+        };
+
+        renderWorldClocks();
+    }
+
+    function renderWorldClocks() {
+        const list = document.getElementById('worldClockList');
+        list.innerHTML = '';
+
+        worldZones.forEach(offset => {
+            const sign = offset >= 0 ? '+' : '';
+            const zoneName = `UTC ${sign}${offset}`;
+            
+            let timeStr = "";
+            if (isDTMS) {
+                const dtms = getDTMSTimeForOffset(offset);
+                timeStr = `${dtms.h}:${dtms.m}:${dtms.s} DTMS`;
+            } else {
+                timeStr = getStandardTimeForOffset(offset);
+            }
+
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.innerHTML = `
+                <div>
+                    <div class="item-title">${zoneName}</div>
+                </div>
+                <div style="font-size: 1.2rem; font-weight: bold; color:#60a5fa;">${timeStr}</div>
+                <button onclick="removeZone(${offset})" class="btn btn-danger" style="padding:0.2rem 0.5rem;">✕</button>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    window.removeZone = (offset) => {
+        worldZones = worldZones.filter(z => z !== offset);
+        localStorage.setItem('klockatt_zones', JSON.stringify(worldZones));
+        renderWorldClocks();
+    };
+
+    /* --- SIDA 3: TIMER LOGIK --- */
+    const inH = document.getElementById('tHours');
+    const inM = document.getElementById('tMinutes');
+    const inS = document.getElementById('tSeconds');
+
+    function setupTimer() {
+        document.getElementById('btnUp').onclick = startTimerUp;
+        document.getElementById('btnDown').onclick = startTimerDown;
+        document.getElementById('btnStop').onclick = stopTimer;
+        document.getElementById('btnReset').onclick = resetTimer;
+
+        [inH, inM, inS].forEach(input => {
+            input.addEventListener('input', () => {
+                if (timerMode === 'idle') readTimerFromInputs();
+            });
+        });
+    }
+
+    function readTimerFromInputs() {
+        const h = parseInt(inH.value) || 0;
+        const m = parseInt(inM.value) || 0;
+        const s = parseInt(inS.value) || 0;
+        const multiplier = isDTMS ? 100 : 60;
+        timerTotalSeconds = (h * multiplier * multiplier) + (m * multiplier) + s;
+    }
+
+    function updateTimerDisplay() {
+        const maxUnits = isDTMS ? 100 : 60;
+        const h = Math.floor(timerTotalSeconds / (maxUnits * maxUnits));
+        const rem = timerTotalSeconds % (maxUnits * maxUnits);
+        const m = Math.floor(rem / maxUnits);
+        const s = rem % maxUnits;
+
+        inH.value = h;
+        inM.value = m;
+        inS.value = s;
+    }
+
+    function startTimerUp() {
+        stopTimer();
+        timerMode = 'up';
+        timerInterval = setInterval(() => {
+            timerTotalSeconds++;
+            updateTimerDisplay();
+        }, isDTMS ? 432 : 1000);
+    }
+
+    function startTimerDown() {
+        stopTimer();
+        readTimerFromInputs();
+        if (timerTotalSeconds <= 0) return;
+        timerMode = 'down';
+        timerInterval = setInterval(() => {
+            if (timerTotalSeconds > 0) {
+                timerTotalSeconds--;
+                updateTimerDisplay();
+            } else {
+                stopTimer();
+                triggerAlarmSound("Timern har nått noll!", selectedTimerSound);
+            }
+        }, isDTMS ? 432 : 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(timerInterval);
+        timerMode = 'idle';
+    }
+
+    function resetTimer() {
+        stopTimer();
+        timerTotalSeconds = 0;
+        updateTimerDisplay();
+    }
+
+    /* --- MAIN LOOP & ALARM ENGINE --- */
+    function mainTick() {
+        renderWorldClocks();
+        checkAlarms();
+    }
+
+    function checkAlarms() {
+        const now = new Date();
+        const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const currentSec = now.getSeconds();
+        const currentDay = now.getDay();
+
+        if (currentSec !== 0) return;
+
+        alarms.forEach(a => {
+            if (!a.active) return;
+            if (a.time === currentHHMM) {
+                let shouldTrigger = false;
+
+                if (a.repeat === 'weekly' && a.days.includes(currentDay)) shouldTrigger = true;
+                if (a.repeat === 'monthly' && now.getDate() === 1) shouldTrigger = true;
+                if (a.repeat === 'yearly' && now.getMonth() === 0 && now.getDate() === 1) shouldTrigger = true;
+                
+                if (shouldTrigger) {
+                    triggerAlarmSound(`Larm (${a.duration} min varaktighet)`, a.sound);
+                }
+            }
+        });
+    }
+
+    function triggerAlarmSound(msg, soundVal) {
+        document.getElementById('alarmOverlaySub').textContent = msg;
+        document.getElementById('alarmOverlay').classList.add('active');
+
+        playSound(soundVal);
+
+        if ('vibrate' in navigator) navigator.vibrate([500, 200, 500]);
+    }
+
+    document.getElementById('stopAlarmBtn').onclick = () => {
+        document.getElementById('alarmOverlay').classList.remove('active');
+    };
+
+    /* Service Worker Registrering */
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registrerad!'))
+                .catch(err => console.error('SW-fel:', err));
+        });
+    }
+</script>
+</body>
+</html>
